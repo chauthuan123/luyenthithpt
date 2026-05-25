@@ -3,41 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng Thi Trực Tuyến - Chấm Điểm Chuẩn Bộ GD</title>
+    <title>Phòng Thi Trực Tuyến - PDF & Chấm Điểm Chuẩn Bộ GD</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Chỉ áp dụng màu xanh khi đang làm bài (chưa vào chế độ xem lại bài) */
+        body:not(.review-mode) .bubble-input:checked + label {
+            background-color: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+        body:not(.review-mode) .bubble-input-tf:checked + label {
+            background-color: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+
+        /* Đồng bộ kích thước layout chia đôi */
+        html, body { height: 100%; }
+        #mainLayout { min-height: 0; }
+        #leftCol, #answerSheet { min-height: 0; }
+        #leftCol iframe { display: block; }
+        #pdfViewer { height: 100%; width: 100%; }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-20">
-    <!-- Header -->
-    <nav class="bg-white shadow-sm py-4 px-6 sticky top-0 z-50 flex justify-between items-center border-b">
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm py-3 px-6 flex justify-between items-center border-b h-16 shrink-0">
         <div>
-            <h1 id="examTitle" class="text-xl font-bold text-gray-800">Đang tải đề thi...</h1>
+            <h1 id="examTitle" class="text-lg font-bold text-gray-800">Đang tải đề thi...</h1>
             <p id="examSubject" class="text-xs text-blue-600 font-bold uppercase"></p>
         </div>
         <div class="flex items-center space-x-6">
-            <div id="timerContainer" class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-mono font-bold text-lg flex items-center space-x-2">
+            <div id="timerContainer" class="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-lg font-mono font-bold text-lg flex items-center space-x-2">
                 <span>⏱️</span> <span id="timer">--:--</span>
             </div>
             <button id="submitBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-lg transition">
                 Nộp Bài
             </button>
             <button id="backBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg transition hidden">
-                Quay Lại Trang Chủ
+                Quay Lại
             </button>
         </div>
     </nav>
 
-    <!-- Khung kết quả chi tiết phân tầng -->
-    <div id="resultBanner" class="max-w-4xl mx-auto mt-6 bg-green-100 border border-green-300 rounded-xl p-6 text-center hidden">
-        <h2 class="text-2xl font-black text-green-800">KẾT QUẢ THI CỦA BẠN</h2>
-        <p class="text-5xl font-black text-green-600 mt-2" id="scoreValue">0.0 / 10</p>
-        <div class="mt-4 text-sm text-gray-700 space-y-1 inline-block text-left font-medium">
+    <!-- Kết quả thi phân tầng chuẩn Bộ GD (Chỉ hiện khi xem lại bài) -->
+    <div id="resultBanner" class="bg-green-50 border-b border-green-200 py-4 px-6 text-center hidden shrink-0">
+        <h2 class="text-sm font-black text-green-800 uppercase tracking-wider">KẾT QUẢ THI CỦA BẠN</h2>
+        <p class="text-3xl font-black text-green-600 mt-1" id="scoreValue">0.0 / 10</p>
+        <div class="text-xs text-gray-700 mt-2 space-x-6 flex justify-center flex-wrap gap-y-2">
             <p id="part1ScoreText">🔹 Phần I (Trắc nghiệm đơn): Đang tính...</p>
             <p id="part2ScoreText">🔹 Phần II (Trắc nghiệm Đúng/Sai): Đang tính...</p>
             <p id="part3ScoreText">🔹 Phần III (Trả lời ngắn): Đang tính...</p>
         </div>
     </div>
 
-    <div class="max-w-4xl mx-auto py-8 px-4 space-y-8" id="examContent"></div>
+    <!-- MAIN BODY: CHIA ĐÔI MÀN HÌNH -->
+    <div id="mainLayout" class="flex flex-grow min-h-0 overflow-hidden">
+
+        <!-- CỘT TRÁI (60%): TRÌNH XEM FILE PDF ĐỀ THI -->
+        <div id="leftCol" class="w-3/5 h-full bg-gray-300 relative border-r min-h-0">
+            <iframe id="pdfViewer" src="" frameborder="0"></iframe>
+            <div id="pdfLoading" class="absolute inset-0 flex items-center justify-center bg-gray-100 font-bold text-gray-500 text-sm">
+                Đang tải tệp PDF đề thi...
+            </div>
+        </div>
+
+        <!-- CỘT PHẢI (40%): PHIẾU ĐÁP ÁN -->
+        <div class="w-2/5 h-full overflow-y-auto bg-white p-6 pb-28 space-y-8" id="answerSheet">
+            <h2 class="text-lg font-black text-gray-800 border-b pb-2">PHIẾU TRẢ LỜI TRẮC NGHIỆM</h2>
+
+            <!-- PHẦN I -->
+            <div class="space-y-4">
+                <h3 class="font-bold text-xs text-blue-700 uppercase bg-blue-50 p-2 rounded">PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn</h3>
+                <div class="space-y-3" id="sheetPart1"></div>
+            </div>
+
+            <!-- PHẦN II -->
+            <div class="space-y-4">
+                <h3 class="font-bold text-xs text-green-700 uppercase bg-green-50 p-2 rounded">PHẦN II. Câu trắc nghiệm Đúng/Sai</h3>
+                <div class="space-y-4" id="sheetPart2"></div>
+            </div>
+
+            <!-- PHẦN III -->
+            <div class="space-y-4">
+                <h3 class="font-bold text-xs text-purple-700 uppercase bg-purple-50 p-2 rounded">PHẦN III. Câu trắc nghiệm trả lời ngắn</h3>
+                <div class="space-y-3" id="sheetPart3"></div>
+            </div>
+        </div>
+
+    </div>
 
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -45,18 +99,15 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <script>
-        // ==========================================
-        // DÁN FIREBASE CONFIG THỰC TẾ CỦA BẠN VÀO ĐÂY
-        // ==========================================
         const firebaseConfig = {
-  apiKey: "AIzaSyAyLs8e_JzKxbCemNrBSSGit4RlzGK8i2c",
-  authDomain: "luyenthithpt-25ee7.firebaseapp.com",
-  projectId: "luyenthithpt-25ee7",
-  storageBucket: "luyenthithpt-25ee7.firebasestorage.app",
-  messagingSenderId: "69902728630",
-  appId: "1:69902728630:web:d828ddd5cca8f35649d517",
-  measurementId: "G-YE1V7SZZ11"
-};
+          apiKey: "AIzaSyAyLs8e_JzKxbCemNrBSSGit4RlzGK8i2c",
+          authDomain: "luyenthithpt-25ee7.firebaseapp.com",
+          projectId: "luyenthithpt-25ee7",
+          storageBucket: "luyenthithpt-25ee7.firebasestorage.app",
+          messagingSenderId: "69902728630",
+          appId: "1:69902728630:web:d828ddd5cca8f35649d517",
+          measurementId: "G-YE1V7SZZ11"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
@@ -64,7 +115,7 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const examId = urlParams.get('examId');
-        const resultId = urlParams.get('resultId'); 
+        const resultId = urlParams.get('resultId');
 
         let examData = null;
         let resultData = null;
@@ -72,14 +123,13 @@
         let userEmail = "";
         let userId = "";
 
-        // HÀM CHUYỂN ĐỔI LINK GOOGLE DRIVE THÀNH LINK ẢNH HIỂN THỊ TRỰC TIẾP
-        function convertDriveUrl(url) {
+        // HÀM CHUYỂN ĐỔI LINK GOOGLE DRIVE THÀNH LINK XEM PDF TRỰC TIẾP TRONG IFRAME [1]
+        function convertDrivePdfUrl(url) {
             if (!url) return "";
             if (url.includes("drive.google.com")) {
                 const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
                 if (match && match[1]) {
-                    // Trả về link máy chủ hiển thị ảnh tĩnh của Google
-                    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+                    return `https://drive.google.com/file/d/${match[1]}/preview`;
                 }
             }
             return url;
@@ -110,7 +160,19 @@
                 document.getElementById('examTitle').innerText = examData.title;
                 document.getElementById('examSubject').innerText = examData.subject;
 
+                const pdfIframe = document.getElementById('pdfViewer');
+                pdfIframe.onload = () => {
+                    document.getElementById('pdfLoading').classList.add('hidden');
+                };
+                pdfIframe.onerror = () => {
+                    document.getElementById('pdfLoading').innerText = 'Không tải được PDF. Thử lại hoặc kiểm tra link.';
+                };
+
+                pdfIframe.src = convertDrivePdfUrl(examData.pdf_url);
+
                 if (resultId) {
+                    // Kích hoạt chế độ xem lại bài thi
+                    document.body.classList.add('review-mode');
                     document.getElementById('timerContainer').classList.add('hidden');
                     document.getElementById('submitBtn').classList.add('hidden');
                     document.getElementById('backBtn').classList.remove('hidden');
@@ -119,11 +181,11 @@
                     if (resultDoc.exists) {
                         resultData = resultDoc.data();
                         showResultBannerDetail(resultData);
-                        renderExam(true);
+                        renderAnswerSheet(true);
                     }
                 } else {
-                    renderExam(false);
-                    startTimer(examData.duration);
+                    renderAnswerSheet(false);
+                    startTimer(examData.duration || 90);
                 }
             } catch (error) {
                 console.error(error);
@@ -150,147 +212,261 @@
             }, 1000);
         }
 
-        // Vẽ giao diện đề thi
-        function renderExam(isReviewMode) {
-            const container = document.getElementById('examContent');
-            container.innerHTML = "";
+        function renderAnswerSheet(isReviewMode) {
+            const sheet1 = document.getElementById('sheetPart1');
+            const sheet2 = document.getElementById('sheetPart2');
+            const sheet3 = document.getElementById('sheetPart3');
 
-            // --- PHẦN I ---
-            if (examData.part1 && examData.part1.length > 0) {
-                let html = `<div class="bg-white rounded-xl shadow-sm border p-6"><h3 class="text-lg font-bold text-blue-700 mb-4">PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn (Chọn 1 đáp án đúng)</h3>`;
-                examData.part1.forEach((q, idx) => {
-                    let savedAns = isReviewMode && resultData.userAnswers.part1 ? resultData.userAnswers.part1[idx] : "";
-                    
-                    // Chuyển đổi link ảnh (Nếu là Drive thì đổi thành link xem trực tiếp)
-                    let directImg = convertDriveUrl(q.image_url);
-                    let imageHtml = directImg ? `<div class="my-3"><img src="${directImg}" class="max-h-64 object-contain rounded-lg border shadow-sm"></div>` : "";
+            sheet1.innerHTML = "";
+            sheet2.innerHTML = "";
+            sheet3.innerHTML = "";
 
-                    html += `<div class="mb-6 border-b pb-4">
-                        <p class="font-semibold text-gray-800 mb-2">Câu ${idx + 1}. ${q.question}</p>
-                        ${imageHtml}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">`;
-                    
-                    q.options.forEach(opt => {
-                        let optChar = opt.charAt(0);
-                        let isChecked = savedAns === optChar ? "checked" : "";
-                        let disabled = isReviewMode ? "disabled" : "";
-                        
-                        let labelBg = "bg-gray-50";
-                        if (isReviewMode) {
-                            if (optChar === q.correct_answer) {
-                                labelBg = "bg-green-100 border-green-500 text-green-800 font-bold";
-                            } else if (savedAns === optChar && savedAns !== q.correct_answer) {
-                                labelBg = "bg-red-100 border-red-400 text-red-800";
-                            }
-                        }
+            // PHẦN I (18 câu - Trắc nghiệm chọn 1 đáp án)
+            for (let i = 0; i < 18; i++) {
+                let savedAns = isReviewMode && resultData.userAnswers?.part1 ? resultData.userAnswers.part1[i] : "";
+                let correctAnsObj = examData.part1 && examData.part1[i] ? examData.part1[i] : {};
+                let correctAns = correctAnsObj.correct_answer || "";
 
-                        html += `<label class="flex items-center p-3 rounded-lg border ${labelBg} cursor-pointer space-x-3">
-                            <input type="radio" name="part1_${idx}" value="${optChar}" ${isChecked} ${disabled} class="h-4 w-4 text-blue-600">
-                            <span>${opt}</span>
-                        </label>`;
-                    });
-                    
-                    html += `</div>`;
-                    if (isReviewMode) {
-                        html += `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-sm text-gray-700"><strong class="text-yellow-800">Giải thích:</strong> ${q.explanation || "Chưa có giải thích."}</div>`;
-                    }
-                    html += `</div>`;
-                });
-                html += `</div>`;
-                container.insertAdjacentHTML('beforeend', html);
-            }
+                let rowHtml = `<div class="border-b pb-3 text-sm">
+                    <div class="flex items-center space-x-4">
+                        <span class="font-bold text-gray-700 w-16">Câu ${i+1}:</span>
+                        <div class="flex space-x-3">`;
 
-            // --- PHẦN II (Đúng/Sai) ---
-            if (examData.part2 && examData.part2.length > 0) {
-                let html = `<div class="bg-white rounded-xl shadow-sm border p-6"><h3 class="text-lg font-bold text-green-700 mb-4">PHẦN II. Câu trắc nghiệm Đúng/Sai (Mỗi câu gồm 4 mệnh đề)</h3>`;
-                examData.part2.forEach((q, idx) => {
-                    let savedAns = isReviewMode && resultData.userAnswers.part2 ? resultData.userAnswers.part2[idx] : {};
-                    let correctAnsList = q.correct_answer.split(',');
-
-                    let directImg = convertDriveUrl(q.image_url);
-                    let imageHtml = directImg ? `<div class="my-3"><img src="${directImg}" class="max-h-64 object-contain rounded-lg border shadow-sm"></div>` : "";
-
-                    html += `<div class="mb-8 border-b pb-6">
-                        <p class="font-semibold text-gray-800 mb-2 whitespace-pre-line">Câu ${idx + 1}. ${q.question}</p>
-                        ${imageHtml}
-                        <table class="w-full border-collapse border border-gray-200 text-sm mt-3">
-                            <thead>
-                                <tr class="bg-gray-100">
-                                    <th class="border border-gray-200 p-2 text-left">Ý phát biểu xét duyệt</th>
-                                    <th class="border border-gray-200 p-2 w-24 text-center">Đúng (Đ)</th>
-                                    <th class="border border-gray-200 p-2 w-24 text-center">Sai (S)</th>
-                                </tr>
-                            </thead>
-                            <tbody>`;
-                    
-                    q.statements.forEach((st, sIdx) => {
-                        let userAns = savedAns[st.id] || "";
-                        let disabled = isReviewMode ? "disabled" : "";
-                        let correctAns = correctAnsList[sIdx] ? correctAnsList[sIdx].trim() : "";
-
-                        let rowBg = "";
-                        if (isReviewMode) {
-                            if (userAns === correctAns) {
-                                rowBg = "bg-green-50";
-                            } else if (userAns !== "" && userAns !== correctAns) {
-                                rowBg = "bg-red-50";
-                            }
-                        }
-
-                        html += `<tr class="${rowBg}">
-                            <td class="border border-gray-200 p-3"><strong class="text-gray-700">${st.id.toUpperCase()}.</strong> ${st.text}</td>
-                            <td class="border border-gray-200 text-center p-2">
-                                <input type="radio" name="part2_${idx}_${st.id}" value="Đ" ${userAns === 'Đ' ? 'checked' : ''} ${disabled} class="h-4 w-4">
-                            </td>
-                            <td class="border border-gray-200 text-center p-2">
-                                <input type="radio" name="part2_${idx}_${st.id}" value="S" ${userAns === 'S' ? 'checked' : ''} ${disabled} class="h-4 w-4">
-                            </td>
-                        </tr>`;
-                    });
-
-                    html += `</tbody></table>`;
-                    if (isReviewMode) {
-                        html += `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-sm text-gray-700"><strong class="text-yellow-800">Giải thích:</strong> ${q.explanation || "Chưa có giải thích."}</div>`;
-                    }
-                    html += `</div>`;
-                });
-                html += `</div>`;
-                container.insertAdjacentHTML('beforeend', html);
-            }
-
-            // --- PHẦN III (Trả lời ngắn) ---
-            if (examData.part3 && examData.part3.length > 0) {
-                let html = `<div class="bg-white rounded-xl shadow-sm border p-6"><h3 class="text-lg font-bold text-purple-700 mb-4">PHẦN III. Câu trắc nghiệm trả lời ngắn (Tự điền kết quả tính toán)</h3>`;
-                examData.part3.forEach((q, idx) => {
-                    let savedAns = isReviewMode && resultData.userAnswers.part3 ? resultData.userAnswers.part3[idx] : "";
+                ["A", "B", "C", "D"].forEach(opt => {
+                    let isChecked = savedAns === opt ? "checked" : "";
                     let disabled = isReviewMode ? "disabled" : "";
-                    let correctAnswerStr = q.answer ? q.answer.trim() : "";
 
-                    let directImg = convertDriveUrl(q.image_url);
-                    let imageHtml = directImg ? `<div class="my-3"><img src="${directImg}" class="max-h-64 object-contain rounded-lg border shadow-sm"></div>` : "";
-
-                    let borderCol = "border-gray-300";
+                    let btnClass = "border-gray-300 text-gray-700 hover:bg-gray-100";
                     if (isReviewMode) {
-                        borderCol = savedAns.trim() === correctAnswerStr ? "border-green-500 bg-green-50" : "border-red-400 bg-red-50";
+                        if (opt === correctAns) {
+                            btnClass = "bg-green-600 text-white border-green-600 font-bold";
+                        } else if (savedAns === opt && savedAns !== correctAns) {
+                            btnClass = "bg-red-500 text-white border-red-500";
+                        }
                     }
 
-                    html += `<div class="mb-6 border-b pb-4">
-                        <p class="font-semibold text-gray-800 mb-2">Câu ${idx + 1}. ${q.question}</p>
-                        ${imageHtml}
-                        <div class="flex items-center space-x-3 mt-3">
-                            <span class="text-gray-600 font-semibold text-sm">Đáp án của bạn:</span>
-                            <input type="text" id="part3_${idx}" value="${savedAns}" ${disabled} class="border ${borderCol} p-2 rounded-lg focus:outline-none w-48 font-bold">
-                        </div>`;
-                    
-                    if (isReviewMode) {
-                        html += `<p class="mt-2 text-sm text-green-700 font-bold">Đáp án đúng: ${correctAnswerStr}</p>`;
-                        html += `<div class="mt-2 bg-yellow-50 p-3 rounded-lg text-sm text-gray-700"><strong class="text-yellow-800">Giải thích:</strong> ${q.explanation || "Chưa có giải thích."}</div>`;
-                    }
-                    html += `</div>`;
+                    rowHtml += `
+                        <input type="radio" name="part1_${i}" id="p1_${i}_${opt}" value="${opt}" ${isChecked} ${disabled} class="bubble-input hidden">
+                        <label for="p1_${i}_${opt}" class="w-8 h-8 rounded-full border flex items-center justify-center cursor-pointer transition text-xs font-bold ${btnClass}">${opt}</label>
+                    `;
                 });
-                html += `</div>`;
-                container.insertAdjacentHTML('beforeend', html);
+
+                rowHtml += `</div></div>`;
+                if (isReviewMode && correctAnsObj.explanation) {
+                    rowHtml += `<div class="mt-2 bg-yellow-50 p-2.5 rounded-lg text-[11px] text-gray-700"><strong class="text-yellow-800">Giải thích:</strong> ${correctAnsObj.explanation}</div>`;
+                }
+                rowHtml += `</div>`;
+                sheet1.insertAdjacentHTML('beforeend', rowHtml);
             }
+
+            // PHẦN II (4 câu - Trắc nghiệm Đúng/Sai)
+            for (let i = 0; i < 4; i++) {
+                let savedAns = isReviewMode && resultData.userAnswers?.part2 ? resultData.userAnswers.part2[i] : {};
+                let correctAnsObj = examData.part2 && examData.part2[i] ? examData.part2[i] : {};
+                let correctAnsList = correctAnsObj.correct_answer ? correctAnsObj.correct_answer.split(',') : ["Đ","S","S","Đ"];
+
+                let blockHtml = `<div class="border p-4 rounded-xl space-y-3 bg-gray-50/50">
+                    <p class="font-bold text-sm text-gray-800">Câu ${i+1}:</p>
+                    <table class="w-full border-collapse border border-gray-200 text-xs">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border p-1 text-left">Ý</th>
+                                <th class="border p-1 w-20 text-center">Đúng (Đ)</th>
+                                <th class="border p-1 w-20 text-center">Sai (S)</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                ["a", "b", "c", "d"].forEach((stId, sIdx) => {
+                    let userAns = savedAns[stId] || "";
+                    let disabled = isReviewMode ? "disabled" : "";
+                    let correctAns = correctAnsList[sIdx] ? correctAnsList[sIdx].trim() : "";
+
+                    let rowBg = "";
+                    if (isReviewMode) {
+                        rowBg = userAns === correctAns ? "bg-green-100/50" : (userAns !== "" ? "bg-red-100/50" : "");
+                    }
+
+                    let classD = "hover:bg-gray-100";
+                    let classS = "hover:bg-gray-100";
+                    if (isReviewMode) {
+                        if (correctAns === 'Đ') classD = "bg-green-600 text-white border-green-600 font-bold";
+                        if (correctAns === 'S') classS = "bg-green-600 text-white border-green-600 font-bold";
+                        
+                        if (userAns !== correctAns) {
+                            if (userAns === 'Đ') classD = "bg-red-500 text-white border-red-500 font-bold";
+                            if (userAns === 'S') classS = "bg-red-500 text-white border-red-500 font-bold";
+                        }
+                    }
+
+                    blockHtml += `<tr class="${rowBg}">
+                        <td class="border p-2 font-bold text-gray-700 text-center uppercase">${stId}</td>
+                        <td class="border p-1 text-center">
+                            <input type="radio" name="part2_${i}_${stId}" id="p2_${i}_${stId}_Đ" value="Đ" ${userAns === 'Đ' ? 'checked' : ''} ${disabled} class="bubble-input-tf hidden">
+                            <label for="p2_${i}_${stId}_Đ" class="w-8 h-6 rounded border border-gray-300 inline-flex items-center justify-center cursor-pointer text-[10px] font-bold ${classD}">Đ</label>
+                        </td>
+                        <td class="border p-1 text-center">
+                            <input type="radio" name="part2_${i}_${stId}" id="p2_${i}_${stId}_S" value="S" ${userAns === 'S' ? 'checked' : ''} ${disabled} class="bubble-input-tf hidden">
+                            <label for="p2_${i}_${stId}_S" class="w-8 h-6 rounded border border-gray-300 inline-flex items-center justify-center cursor-pointer text-[10px] font-bold ${classS}">S</label>
+                        </td>
+                    </tr>`;
+                });
+
+                blockHtml += `</tbody></table>`;
+                if (isReviewMode && correctAnsObj.explanation) {
+                    blockHtml += `<div class="mt-2 bg-yellow-50 p-2.5 rounded-lg text-[11px] text-gray-700"><strong class="text-yellow-800">Giải thích:</strong> ${correctAnsObj.explanation}</div>`;
+                }
+                blockHtml += `</div>`;
+                sheet2.insertAdjacentHTML('beforeend', blockHtml);
+            }
+
+            // PHẦN III (6 câu - Câu trả lời ngắn)
+            for (let i = 0; i < 6; i++) {
+                let savedAns = isReviewMode && resultData.userAnswers?.part3 ? resultData.userAnswers.part3[i] : "";
+                let correctAnsObj = examData.part3 && examData.part3[i] ? examData.part3[i] : {};
+                let correctAns = correctAnsObj.correct_answer || correctAnsObj.answer || "";
+
+                let isCorrect = savedAns.trim().toLowerCase() === correctAns.trim().toLowerCase();
+                let inputBg = isReviewMode ? (isCorrect ? "bg-green-100 border-green-500 text-green-800 font-bold" : "bg-red-100 border-red-500 text-red-800") : "";
+
+                let rowHtml = `<div class="border-b pb-3 text-sm">
+                    <div class="flex items-center space-x-4">
+                        <span class="font-bold text-gray-700 w-16">Câu ${i+1}:</span>
+                        <input type="text" id="p3_${i}" value="${savedAns}" ${isReviewMode ? 'disabled' : ''} class="border border-gray-300 rounded px-3 py-1.5 w-full max-w-[200px] outline-none text-sm font-semibold ${inputBg}">
+                    </div>`;
+
+                if (isReviewMode) {
+                    rowHtml += `<div class="mt-1 text-xs text-green-700 font-bold">Đáp án đúng: ${correctAns}</div>`;
+                    if (correctAnsObj.explanation) {
+                        rowHtml += `<div class="mt-2 bg-yellow-50 p-2.5 rounded-lg text-[11px] text-gray-700"><strong class="text-yellow-800">Giải thích:</strong> ${correctAnsObj.explanation}</div>`;
+                    }
+                }
+                rowHtml += `</div>`;
+                sheet3.insertAdjacentHTML('beforeend', rowHtml);
+            }
+        }
+
+        // THUẬT TOÁN CHẤM ĐIỂM PHÂN TẦNG CHUẨN BỘ GIÁO DỤC [1]
+        async function submitExam() {
+    try {
+        if (countdownTimer) clearInterval(countdownTimer);
+
+        let part1Score = 0; // Điểm Phần I (Tối đa 4.5)
+        let part2Score = 0; // Điểm Phần II (Tối đa 4.0)
+        let part3Score = 0; // Điểm Phần III (Tối đa 1.5)
+
+        let p1CorrectCount = 0;
+        let p2CorrectStatementsCount = 0; // Tổng số ý đúng trong cả 4 câu Phần II
+        let p3CorrectCount = 0;
+        
+        const userAnswers = {
+            part1: [],
+            part2: [],
+            part3: []
+        };
+
+        // 1. Chấm điểm phần I (Mỗi câu đúng được 0.25đ)
+        for (let i = 0; i < 18; i++) {
+            const selected = document.querySelector(`input[name="part1_${i}"]:checked`);
+            const ans = selected ? selected.value : "";
+            userAnswers.part1.push(ans);
+            
+            const q = examData.part1 && examData.part1[i] ? examData.part1[i] : {};
+            const correct = q.correct_answer || "";
+            if (ans === correct && correct !== "") {
+                p1CorrectCount++;
+                part1Score += 0.25;
+            }
+        }
+
+        // 2. Chấm điểm phần II (Theo quy tắc đặc biệt của Bộ GD)
+        for (let i = 0; i < 4; i++) {
+            let stAns = {};
+            const q = examData.part2 && examData.part2[i] ? examData.part2[i] : {};
+            let correctAnsList = q.correct_answer ? q.correct_answer.split(',') : [];
+            let correctInThisQuestion = 0; // Số ý đúng riêng của câu này (0 đến 4)
+
+            ["a", "b", "c", "d"].forEach((stId, sIdx) => {
+                const selected = document.querySelector(`input[name="part2_${i}_${stId}"]:checked`);
+                const ans = selected ? selected.value : "";
+                stAns[stId] = ans;
+                
+                let correctAns = correctAnsList[sIdx] ? correctAnsList[sIdx].trim() : "";
+                if (ans === correctAns && correctAns !== "") {
+                    correctInThisQuestion++;
+                    p2CorrectStatementsCount++;
+                }
+            });
+
+            // Tính điểm riêng cho câu này dựa vào số ý đúng (0.1, 0.25, 0.5, 1.0)
+            if (correctInThisQuestion === 1) part2Score += 0.1;
+            else if (correctInThisQuestion === 2) part2Score += 0.25;
+            else if (correctInThisQuestion === 3) part2Score += 0.5;
+            else if (correctInThisQuestion === 4) part2Score += 1.0;
+
+            userAnswers.part2.push(stAns);
+        }
+
+        // 3. Chấm điểm phần III (Mỗi câu đúng được 0.25đ)
+        for (let i = 0; i < 6; i++) {
+            const inputEl = document.getElementById(`p3_${i}`);
+            const ans = inputEl ? inputEl.value.trim() : "";
+            userAnswers.part3.push(ans);
+            
+            const q = examData.part3 && examData.part3[i] ? examData.part3[i] : {};
+            let correctAnswerStr = q.correct_answer || q.answer || "";
+            if (ans.toLowerCase() === correctAnswerStr.trim().toLowerCase() && correctAnswerStr !== "") {
+                p3CorrectCount++;
+                part3Score += 0.25;
+            }
+        }
+
+        // Tính tổng điểm (Làm tròn đến 2 chữ số thập phân)
+        const totalScore = parseFloat((part1Score + part2Score + part3Score).toFixed(2));
+
+        const finalUserId = userId || "anonymous_user";
+        const finalUserEmail = userEmail || "anonymous@domain.com";
+
+        // Ghi kết quả thi và danh sách đáp án học sinh đã chọn lên Firestore
+        const docRef = await db.collection("results").add({
+            userId: finalUserId,
+            userEmail: finalUserEmail,
+            examId: examId,
+            examTitle: examData.title || "Đề thi không tiêu đề",
+            subject: examData.subject || "Khác",
+            
+            score: totalScore, // Tổng điểm
+            part1Score: parseFloat(part1Score.toFixed(2)),
+            part2Score: parseFloat(part2Score.toFixed(2)),
+            part3Score: parseFloat(part3Score.toFixed(2)),
+
+            p1CorrectCount: p1CorrectCount,
+            p2CorrectStatementsCount: p2CorrectStatementsCount,
+            p3CorrectCount: p3CorrectCount,
+
+            userAnswers: userAnswers,
+            createdAt: new Date() // Thay thế serverTimestamp bằng JS Date tiêu chuẩn
+        });
+
+        alert("Nộp bài và tính điểm theo quy chế Bộ GD thành công!");
+        window.location.href = `?examId=${examId}&resultId=${docRef.id}`;
+
+    } catch (error) {
+        console.error("Lỗi chi tiết khi nộp bài:", error);
+        alert("Đã xảy ra lỗi khi nộp bài: " + error.message);
+    }
+}
+
+        // Hàm hiển thị bảng điểm chi tiết [1]
+        function showResultBannerDetail(res) {
+            document.getElementById('resultBanner').classList.remove('hidden');
+            // Thích ứng linh hoạt với cả hai trường tên biến (score hoặc scores.total)
+            const scoreDisplay = res.score !== undefined ? res.score : (res.scores?.total || 0);
+            document.getElementById('scoreValue').innerText = `${scoreDisplay} / 10`;
+            
+            document.getElementById('part1ScoreText').innerText = `🔹 Phần I (Trắc nghiệm đơn): Đúng ${res.p1CorrectCount || 0}/18 câu ➔ Đạt ${res.part1Score || 0} điểm`;
+            document.getElementById('part2ScoreText').innerText = `🔹 Phần II (Đúng/Sai): Đúng ${res.p2CorrectStatementsCount || 0}/16 ý phát biểu ➔ Đạt ${res.part2Score || 0} điểm`;
+            document.getElementById('part3ScoreText').innerText = `🔹 Phần III (Trả lời ngắn): Đúng ${res.p3CorrectCount || 0}/6 câu ➔ Đạt ${res.part3Score || 0} điểm`;
         }
 
         document.getElementById('submitBtn').addEventListener('click', () => {
@@ -302,124 +478,6 @@
         document.getElementById('backBtn').addEventListener('click', () => {
             window.location.href = "dashboard.html";
         });
-
-        // THUẬT TOÁN CHẤM ĐIỂM PHÂN TẦNG CHUẨN BỘ GIÁO DỤC
-        async function submitExam() {
-            clearInterval(countdownTimer);
-
-            let part1Score = 0; // Điểm Phần I (Max 4.5)
-            let part2Score = 0; // Điểm Phần II (Max 4.0)
-            let part3Score = 0; // Điểm Phần III (Max 1.5)
-
-            let p1CorrectCount = 0;
-            let p2CorrectStatementsCount = 0; // Tổng số ý đúng trong cả 4 câu Phần II
-            let p3CorrectCount = 0;
-            
-            const userAnswers = {
-                part1: [],
-                part2: [],
-                part3: []
-            };
-
-            // 1. Chấm điểm phần I (Mỗi câu đúng được 0.25đ)
-            if (examData.part1) {
-                examData.part1.forEach((q, idx) => {
-                    const selected = document.querySelector(`input[name="part1_${idx}"]:checked`);
-                    const ans = selected ? selected.value : "";
-                    userAnswers.part1.push(ans);
-                    if (ans === q.correct_answer) {
-                        p1CorrectCount++;
-                        part1Score += 0.25;
-                    }
-                });
-            }
-
-            // 2. Chấm điểm phần II (Theo quy tắc đặc biệt của Bộ GD)
-            if (examData.part2) {
-                examData.part2.forEach((q, idx) => {
-                    let stAns = {};
-                    let correctAnsList = q.correct_answer.split(',');
-                    let correctInThisQuestion = 0; // Số ý đúng riêng của câu này (0 đến 4)
-
-                    q.statements.forEach((st, sIdx) => {
-                        const selected = document.querySelector(`input[name="part2_${idx}_${st.id}"]:checked`);
-                        const ans = selected ? selected.value : "";
-                        stAns[st.id] = ans;
-                        
-                        let correctAns = correctAnsList[sIdx] ? correctAnsList[sIdx].trim() : "";
-                        if (ans === correctAns) {
-                            correctInThisQuestion++;
-                            p2CorrectStatementsCount++;
-                        }
-                    });
-
-                    // Tính điểm riêng cho câu này dựa vào số ý đúng (0.1, 0.25, 0.5, 1.0)
-                    if (correctInThisQuestion === 1) part2Score += 0.1;
-                    else if (correctInThisQuestion === 2) part2Score += 0.25;
-                    else if (correctInThisQuestion === 3) part2Score += 0.5;
-                    else if (correctInThisQuestion === 4) part2Score += 1.0;
-
-                    userAnswers.part2.push(stAns);
-                });
-            }
-
-            // 3. Chấm điểm phần III (Mỗi câu đúng được 0.25đ)
-            if (examData.part3) {
-                examData.part3.forEach((q, idx) => {
-                    const ans = document.getElementById(`part3_${idx}`).value.trim();
-                    userAnswers.part3.push(ans);
-                    
-                    let correctAnswerStr = q.answer ? q.answer.trim() : "";
-                    if (ans.toLowerCase() === correctAnswerStr.toLowerCase()) {
-                        p3CorrectCount++;
-                        part3Score += 0.25;
-                    }
-                });
-            }
-
-            // Tính tổng điểm (Làm tròn đến 2 chữ số thập phân)
-            const totalScore = parseFloat((part1Score + part2Score + part3Score).toFixed(2));
-
-            try {
-                // Lưu kết quả thi chi tiết vào Firestore
-                const docRef = await db.collection("results").add({
-                    userId: userId,
-                    userEmail: userEmail,
-                    examId: examId,
-                    examTitle: examData.title,
-                    subject: examData.subject,
-                    
-                    score: totalScore, // Tổng điểm
-                    part1Score: parseFloat(part1Score.toFixed(2)),
-                    part2Score: parseFloat(part2Score.toFixed(2)),
-                    part3Score: parseFloat(part3Score.toFixed(2)),
-
-                    p1CorrectCount: p1CorrectCount,
-                    p2CorrectStatementsCount: p2CorrectStatementsCount,
-                    p3CorrectCount: p3CorrectCount,
-
-                    userAnswers: userAnswers,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                alert("Nộp bài và tính điểm theo quy chế Bộ GD thành công!");
-                window.location.href = `exam.html?examId=${examId}&resultId=${docRef.id}`;
-
-            } catch (error) {
-                console.error(error);
-                alert("Không thể lưu kết quả thi: " + error.message);
-            }
-        }
-
-        // Hàm hiển thị bảng điểm chi tiết
-        function showResultBannerDetail(res) {
-            document.getElementById('resultBanner').classList.remove('hidden');
-            document.getElementById('scoreValue').innerText = `${res.score} / 10`;
-            
-            document.getElementById('part1ScoreText').innerText = `🔹 Phần I (Trắc nghiệm đơn): Đúng ${res.p1CorrectCount || 0}/18 câu ➔ Đạt ${res.part1Score || 0} điểm`;
-            document.getElementById('part2ScoreText').innerText = `🔹 Phần II (Đúng/Sai): Đúng ${res.p2CorrectStatementsCount || 0}/16 ý phát biểu ➔ Đạt ${res.part2Score || 0} điểm`;
-            document.getElementById('part3ScoreText').innerText = `🔹 Phần III (Trả lời ngắn): Đúng ${res.p3CorrectCount || 0}/6 câu ➔ Đạt ${res.part3Score || 0} điểm`;
-        }
     </script>
 </body>
 </html>
