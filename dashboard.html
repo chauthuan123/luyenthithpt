@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Điều Khiển - Luyện Thi THPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Thanh điều hướng đầu trang -->
+    <nav class="bg-white shadow-sm py-4 px-6 flex justify-between items-center border-b">
+        <h1 class="text-xl font-bold text-blue-600">Luyện Thi THPT Quốc Gia</h1>
+        <div class="flex items-center space-x-4">
+            <span id="userEmail" class="text-gray-600 font-medium">Đang tải...</span>
+            <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                Đăng Xuất
+            </button>
+        </div>
+    </nav>
+
+    <div class="max-w-5xl mx-auto py-10 px-4 space-y-12">
+        <!-- PHẦN 1: CHỌN MÔN THI ĐỂ RANDOM ĐỀ CHƯA LÀM -->
+        <div class="bg-white rounded-xl shadow-sm border p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Chọn môn học để bắt đầu thi thử</h2>
+            <p class="text-gray-500 mb-6">Hệ thống sẽ tự động tìm kiếm và chọn ngẫu nhiên đề thi bạn chưa làm</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Môn Toán -->
+                <div class="border border-blue-100 rounded-xl p-6 bg-blue-50/50 flex flex-col justify-between hover:shadow-md transition">
+                    <div>
+                        <span class="text-3xl">📐</span>
+                        <h3 class="text-xl font-bold text-blue-900 mt-3 mb-1">Môn Toán Học</h3>
+                        <p class="text-xs text-blue-600 font-semibold mb-4">Cấu trúc 3 phần chuẩn mới</p>
+                    </div>
+                    <button onclick="startRandomExam('Toán')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-sm">
+                        Bắt đầu thi ngẫu nhiên
+                    </button>
+                </div>
+
+                <!-- Môn Hóa -->
+                <div class="border border-green-100 rounded-xl p-6 bg-green-50/50 flex flex-col justify-between hover:shadow-md transition">
+                    <div>
+                        <span class="text-3xl">🧪</span>
+                        <h3 class="text-xl font-bold text-green-900 mt-3 mb-1">Môn Hóa Học</h3>
+                        <p class="text-xs text-green-600 font-semibold mb-4">Cấu trúc 3 phần chuẩn mới</p>
+                    </div>
+                    <button onclick="startRandomExam('Hóa')" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition shadow-sm">
+                        Bắt đầu thi ngẫu nhiên
+                    </button>
+                </div>
+
+                <!-- Môn Vật Lý -->
+                <div class="border border-purple-100 rounded-xl p-6 bg-purple-50/50 flex flex-col justify-between hover:shadow-md transition">
+                    <div>
+                        <span class="text-3xl">⚡</span>
+                        <h3 class="text-xl font-bold text-purple-900 mt-3 mb-1">Môn Vật Lý</h3>
+                        <p class="text-xs text-purple-600 font-semibold mb-4">Cấu trúc 3 phần chuẩn mới</p>
+                    </div>
+                    <button onclick="startRandomExam('Vật Lý')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition shadow-sm">
+                        Bắt đầu thi ngẫu nhiên
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PHẦN 2: LỊCH SỬ THI CỦA BẠN (ĐÃ FIX LỖI SẮP XẾP) -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Lịch sử bài thi đã làm</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-left text-sm text-gray-500">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-700 font-semibold">
+                        <tr>
+                            <th class="px-6 py-4 border-b">Tên đề thi</th>
+                            <th class="px-6 py-4 border-b">Môn</th>
+                            <th class="px-6 py-4 border-b">Số câu đúng</th>
+                            <th class="px-6 py-4 border-b">Điểm Số</th>
+                            <th class="px-6 py-4 border-b">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyList" class="divide-y divide-gray-100 border-t border-gray-100">
+                        <tr>
+                            <td class="px-6 py-4 text-center text-gray-400" colspan="5">Đang kiểm tra lịch sử thi...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ==========================================
+        // DÁN FIREBASE CONFIG THỰC TẾ CỦA BẠN VÀO ĐÂY
+        // ==========================================
+        const firebaseConfig = {
+  apiKey: "AIzaSyAyLs8e_JzKxbCemNrBSSGit4RlzGK8i2c",
+  authDomain: "luyenthithpt-25ee7.firebaseapp.com",
+  projectId: "luyenthithpt-25ee7",
+  storageBucket: "luyenthithpt-25ee7.firebasestorage.app",
+  messagingSenderId: "69902728630",
+  appId: "1:69902728630:web:d828ddd5cca8f35649d517",
+  measurementId: "G-YE1V7SZZ11"
+};
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let userId = "";
+
+        // Kiểm tra đăng nhập
+        auth.onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = "index.html";
+            } else {
+                userId = user.uid;
+                document.getElementById('userEmail').innerText = user.email;
+                loadHistoryFromFirebase(user.uid); // Tải lịch sử làm bài
+            }
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = "index.html";
+            });
+        });
+
+        // HÀM CHỌN ĐỀ NGẪU NHIÊN CHƯA LÀM
+        async function startRandomExam(subject) {
+            try {
+                // 1. Tải toàn bộ đề gốc của môn được chọn
+                const examsSnapshot = await db.collection("exams").where("subject", "==", subject).get();
+                if (examsSnapshot.empty) {
+                    alert(`Hiện tại hệ thống chưa có đề thi thử nào cho môn ${subject}!`);
+                    return;
+                }
+
+                let examList = [];
+                examsSnapshot.forEach(doc => {
+                    examList.push({ id: doc.id, ...doc.data() });
+                });
+
+                // 2. Tải lịch sử thi của người dùng để lọc bỏ đề đã làm
+                const resultsSnapshot = await db.collection("results").where("userId", "==", userId).get();
+                let completedExamIds = new Set();
+                resultsSnapshot.forEach(doc => {
+                    completedExamIds.add(doc.data().examId);
+                });
+
+                // 3. Lọc ra các đề chưa làm
+                let uncompletedExams = examList.filter(exam => !completedExamIds.has(exam.id));
+
+                if (uncompletedExams.length === 0) {
+                    alert(`Bạn đã hoàn thành xuất sắc tất cả các đề thi môn ${subject} trong kho dữ liệu rồi!`);
+                    return;
+                }
+
+                // 4. Lấy ngẫu nhiên 1 đề từ danh sách chưa làm
+                const randomIndex = Math.floor(Math.random() * uncompletedExams.length);
+                const chosenExam = uncompletedExams[randomIndex];
+
+                alert(`Hệ thống đã chọn ngẫu nhiên đề: "${chosenExam.title}" (${chosenExam.duration} phút). Hãy làm bài thật tốt!`);
+                window.location.href = `exam.html?examId=${chosenExam.id}`;
+
+            } catch (error) {
+                console.error(error);
+                alert("Lỗi hệ thống khi chọn đề: " + error.message);
+            }
+        }
+
+        // TẢI LỊCH SỬ THI (Đã tối ưu hóa sắp xếp cục bộ bằng JS để tránh lỗi Index Firebase)
+        async function loadHistoryFromFirebase(uid) {
+            try {
+                const snapshot = await db.collection("results")
+                                        .where("userId", "==", uid)
+                                        .get();
+                
+                const historyList = document.getElementById('historyList');
+                historyList.innerHTML = "";
+
+                if (snapshot.empty) {
+                    historyList.innerHTML = `<tr><td class="px-6 py-4 text-center text-gray-400" colspan="5">Bạn chưa làm bài thi thử nào. Hãy chọn môn học ở trên để thi đề đầu tiên!</td></tr>`;
+                    return;
+                }
+
+                let resultsArray = [];
+                snapshot.forEach(doc => {
+                    resultsArray.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+
+                // Sắp xếp lịch sử bài mới làm lên đầu tiên dựa trên trường createdAt
+                resultsArray.sort((a, b) => {
+                    const timeA = a.createdAt ? a.createdAt.seconds : 0;
+                    const timeB = b.createdAt ? b.createdAt.seconds : 0;
+                    return timeB - timeA;
+                });
+
+                // Hiển thị ra bảng
+                resultsArray.forEach(data => {
+                    const row = `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-semibold text-gray-900">${data.examTitle}</td>
+                            <td class="px-6 py-4"><span class="bg-gray-100 text-gray-800 text-xs px-2.5 py-1 rounded-full font-bold">${data.subject}</span></td>
+                            <td class="px-6 py-4">${data.correctCount} / ${data.totalItems}</td>
+                            <td class="px-6 py-4 font-bold text-blue-600 text-lg">${data.score}</td>
+                            <td class="px-6 py-4">
+                                <a href="exam.html?examId=${data.examId}&resultId=${data.id}" 
+                                   class="text-blue-600 hover:underline font-bold">
+                                    Xem Lời Giải ➡️
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                    historyList.insertAdjacentHTML('beforeend', row);
+                });
+            } catch (error) {
+                console.error(error);
+                document.getElementById('historyList').innerHTML = `<tr><td class="px-6 py-4 text-center text-red-500 font-bold" colspan="5">Lỗi tải lịch sử: ${error.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

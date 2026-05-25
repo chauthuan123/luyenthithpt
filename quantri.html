@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị - Soạn & Sửa Đề Thi THPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8 px-4">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- PHẦN MỚI: QUẢN LÝ VÀ SỬA ĐỀ THI CŨ ĐÃ ĐĂNG -->
+        <div class="bg-white rounded-xl shadow-md p-6 border flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="w-full md:w-2/3">
+                <h2 class="text-lg font-bold text-gray-800 mb-1">Chỉnh sửa đề thi cũ đã đăng trên hệ thống</h2>
+                <p class="text-xs text-gray-500">Chọn đề cũ để tải ngược dữ liệu về sửa câu chữ, chèn thêm ảnh minh họa.</p>
+                <select id="editExamSelect" class="w-full border p-2.5 rounded-lg bg-white font-semibold text-xs mt-2">
+                    <option value="">-- Đang tải danh sách đề thi cũ... --</option>
+                </select>
+            </div>
+            <div class="flex space-x-2 w-full md:w-auto">
+                <button onclick="loadExamToEdit()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg text-xs transition shadow w-full md:w-auto">
+                    📖 Tải dữ liệu để sửa
+                </button>
+                <button id="resetFormBtn" onclick="resetToNewExam()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg text-xs transition shadow w-full md:w-auto hidden">
+                    🆕 Thoát/Tạo đề mới
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- CỘT TRÁI: KHU VỰC DÁN JSON NẠP NHANH (CHIẾM 4 CỘT) -->
+            <div class="lg:col-span-4 bg-white rounded-xl shadow-md p-6 space-y-6 h-fit sticky top-6">
+                <h1 class="text-xl font-black text-blue-600 border-b pb-3 text-center">NẠP ĐỀ NHANH QUA JSON</h1>
+                
+                <!-- THÔNG TIN ĐỀ CHUNG -->
+                <div class="bg-gray-50 p-4 rounded-lg border space-y-3 text-xs">
+                    <h3 class="font-bold text-gray-800">1. Thông tin đề thi chung</h3>
+                    <div>
+                        <label class="block font-bold text-gray-600 mb-1">Tên đề thi:</label>
+                        <input type="text" id="title" placeholder="Ví dụ: Đề thi thử Hóa Học Sở GD Hà Nội" class="w-full border p-2 rounded-lg">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-bold text-gray-600 mb-1">Môn học:</label>
+                            <select id="subject" class="w-full border p-2 rounded-lg bg-white font-semibold">
+                                <option value="Toán">Toán Học</option>
+                                <option value="Hóa">Hóa Học</option>
+                                <option value="Vật Lý">Vật Lý</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-gray-600 mb-1">Thời gian (Phút):</label>
+                            <input type="number" id="duration" value="90" class="w-full border p-2 rounded-lg font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BỘ DÁN JSON TỪNG PHẦN -->
+                <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-4 text-xs">
+                    <h3 class="font-bold text-blue-900">2. Dán đoạn JSON nhỏ vào đây</h3>
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">Chọn phần của đoạn JSON này:</label>
+                        <select id="jsonPart" class="w-full border p-2 rounded-lg bg-white font-semibold text-blue-700">
+                            <option value="part1">Nạp vào PHẦN I (Trắc nghiệm đơn)</option>
+                            <option value="part2">Nạp vào PHẦN II (Đúng/Sai)</option>
+                            <option value="part3">Nạp vào PHẦN III (Trả lời ngắn)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">Dán đoạn JSON (từng chút một):</label>
+                        <textarea id="tempJson" placeholder="Dán đoạn JSON [...] của bạn vào đây" class="w-full border p-2 rounded-lg font-mono h-48 focus:ring-2 focus:ring-blue-500 bg-white"></textarea>
+                    </div>
+                    <button onclick="appendJsonToStaging()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition shadow">
+                        📥 Nạp Vào Bảng Tạm Xem Trước
+                    </button>
+                </div>
+            </div>
+
+            <!-- CỘT PHẢI: BẢNG TẠM CHO PHÉP XEM, SỬA CHỮ, CHÈN ẢNH TỪNG CÂU (CHIẾM 8 CỘT) -->
+            <div class="lg:col-span-8 bg-white rounded-xl shadow-md p-6 flex flex-col justify-between">
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h2 class="text-xl font-bold text-gray-800">Biên Tập & Chỉnh Sửa Câu Hỏi</h2>
+                        <span class="text-xs bg-gray-100 text-gray-600 font-bold px-3 py-1 rounded-full">
+                            Tổng cộng: <span id="totalQuestions" class="text-blue-600">0</span> câu
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-8 overflow-y-auto max-h-[700px] pr-2">
+                        <!-- PHẦN I CONTAINER -->
+                        <div class="space-y-4">
+                            <h3 class="font-extrabold text-blue-700 border-b pb-1 text-sm uppercase">PHẦN I. Trắc nghiệm 1 đáp án (<span id="count1">0</span> câu)</h3>
+                            <div id="stagingPart1" class="space-y-4"></div>
+                        </div>
+
+                        <!-- PHẦN II CONTAINER -->
+                        <div class="space-y-4">
+                            <h3 class="font-extrabold text-green-700 border-b pb-1 text-sm uppercase">PHẦN II. Trắc nghiệm Đúng/Sai (<span id="count2">0</span> câu)</h3>
+                            <div id="stagingPart2" class="space-y-4"></div>
+                        </div>
+
+                        <!-- PHẦN III CONTAINER -->
+                        <div class="space-y-4">
+                            <h3 class="font-extrabold text-purple-700 border-b pb-1 text-sm uppercase">PHẦN III. Trắc nghiệm Trả lời ngắn (<span id="count3">0</span> câu)</h3>
+                            <div id="stagingPart3" class="space-y-4"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nút đăng đề hoàn chỉnh -->
+                <div class="border-t pt-4 mt-6 flex items-center justify-between">
+                    <p class="text-xs text-gray-500 max-w-[50%]">Sau khi sửa, dán link Google Drive vào ô ảnh, hình ảnh sẽ tự động hiển thị xem trước để bạn kiểm tra.</p>
+                    <button id="submitBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-lg shadow-md text-lg transition">
+                        🚀 Đăng Đề Thi Lên Firebase
+                    </button>
+                </div>
+                <div id="statusMsg" class="text-center mt-3 text-sm font-semibold hidden"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ==========================================
+        // DÁN FIREBASE CONFIG THỰC TẾ CỦA BẠN VÀO ĐÂY
+        // ==========================================
+       const firebaseConfig = {
+  apiKey: "AIzaSyAyLs8e_JzKxbCemNrBSSGit4RlzGK8i2c",
+  authDomain: "luyenthithpt-25ee7.firebaseapp.com",
+  projectId: "luyenthithpt-25ee7",
+  storageBucket: "luyenthithpt-25ee7.firebasestorage.app",
+  messagingSenderId: "69902728630",
+  appId: "1:69902728630:web:d828ddd5cca8f35649d517",
+  measurementId: "G-YE1V7SZZ11"
+};
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Biến lưu trạng thái đề cũ đang chỉnh sửa (nếu có)
+        let editingExamId = null;
+
+        window.onload = () => {
+            loadExistingExamsList();
+        };
+
+        // Hàm tải danh sách đề cũ lên thanh chọn
+        async function loadExistingExamsList() {
+            try {
+                const snapshot = await db.collection("exams").orderBy("createdAt", "desc").get();
+                const select = document.getElementById('editExamSelect');
+                select.innerHTML = '<option value="">-- Chọn đề thi cũ để chỉnh sửa --</option>';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    select.insertAdjacentHTML('beforeend', `<option value="${doc.id}">[${data.subject}] ${data.title}</option>`);
+                });
+            } catch (e) {
+                console.error(e);
+                document.getElementById('editExamSelect').innerHTML = '<option value="">Lỗi tải danh sách đề thi cũ</option>';
+            }
+        }
+
+        // Tự động chỉnh thời gian theo môn
+        const subjectSelect = document.getElementById('subject');
+        const durationInput = document.getElementById('duration');
+        subjectSelect.addEventListener('change', () => {
+            durationInput.value = (subjectSelect.value === 'Toán') ? 90 : 50;
+        });
+
+        // Bộ chuyển đổi link Google Drive
+        function convertDriveUrl(url) {
+            if (!url) return "";
+            if (url.includes("drive.google.com")) {
+                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (match && match[1]) {
+                    return `https://lh3.googleusercontent.com/d/${match[1]}`;
+                }
+            }
+            return url;
+        }
+
+        // Hàm xem trước ảnh khi dán link ảnh vào ô nhập
+        function previewImage(input) {
+            const url = (input.value || "").trim();
+            const converted = convertDriveUrl(url);
+            const card = input.closest('.part1-card, .part2-card, .part3-card');
+            if (!card) return;
+
+            const previewDiv = card.querySelector('.image-preview');
+            if (!previewDiv) return;
+
+            previewDiv.innerHTML = converted
+                ? `<img src="${converted}" class="max-h-24 object-contain rounded border mt-1 shadow-sm">`
+                : '';
+        }
+
+
+        // Bộ nhớ tạm chứa danh sách câu hỏi đang biên soạn trên giao diện
+        let part1Array = [];
+        let part2Array = [];
+        let part3Array = [];
+
+        // HÀM QUAN TRỌNG: Tự động lưu những gì bạn vừa gõ trên màn hình trước khi nạp thêm hoặc render lại
+        function saveCurrentStagingState() {
+            const p1Cards = document.querySelectorAll('.part1-card');
+            const p2Cards = document.querySelectorAll('.part2-card');
+            const p3Cards = document.querySelectorAll('.part3-card');
+
+            part1Array = [];
+            p1Cards.forEach((card) => {
+                part1Array.push({
+                    question: card.querySelector('.p1-question').value.trim(),
+                    image_url: card.querySelector('.p1-image').value.trim(),
+                    options: [
+                        card.querySelector('.p1-opt-a').value.trim(),
+                        card.querySelector('.p1-opt-b').value.trim(),
+                        card.querySelector('.p1-opt-c').value.trim(),
+                        card.querySelector('.p1-opt-d').value.trim()
+                    ],
+                    correct_answer: card.querySelector('.p1-ans').value,
+                    explanation: card.querySelector('.p1-exp').value.trim()
+                });
+            });
+
+            part2Array = [];
+            p2Cards.forEach((card) => {
+                const ansA = card.querySelector('.p2-ans-a').value;
+                const ansB = card.querySelector('.p2-ans-b').value;
+                const ansC = card.querySelector('.p2-ans-c').value;
+                const ansD = card.querySelector('.p2-ans-d').value;
+
+                part2Array.push({
+                    question: card.querySelector('.p2-question').value.trim(),
+                    image_url: card.querySelector('.p2-image').value.trim(),
+                    options: ["a", "b", "c", "d"],
+                    correct_answer: `${ansA},${ansB},${ansC},${ansD}`,
+                    statements: [
+                        { id: "a", text: card.querySelector('.p2-st-a').value.trim() },
+                        { id: "b", text: card.querySelector('.p2-st-b').value.trim() },
+                        { id: "c", text: card.querySelector('.p2-st-c').value.trim() },
+                        { id: "d", text: card.querySelector('.p2-st-d').value.trim() }
+                    ],
+                    explanation: card.querySelector('.p2-exp').value.trim()
+                });
+            });
+
+            part3Array = [];
+            p3Cards.forEach((card) => {
+                part3Array.push({
+                    question: card.querySelector('.p3-question').value.trim(),
+                    image_url: card.querySelector('.p3-image').value.trim(),
+                    answer: card.querySelector('.p3-ans').value.trim(),
+                    explanation: card.querySelector('.p3-exp').value.trim()
+                });
+            });
+        }
+
+        // Nạp đoạn JSON vừa dán vào Bảng tạm xem trước (đã chống lỗi ghi đè dữ liệu cũ)
+        function appendJsonToStaging() {
+            const part = document.getElementById('jsonPart').value;
+            const jsonText = document.getElementById('tempJson').value.trim();
+
+            if (!jsonText) {
+                alert("Vui lòng dán đoạn JSON câu hỏi vào ô!");
+                return;
+            }
+
+            try {
+                let parsedData = JSON.parse(jsonText);
+                if (!Array.isArray(parsedData)) {
+                    parsedData = [parsedData];
+                }
+
+                // Lưu lại những gì người dùng đang gõ dở trên màn hình trước khi render mới
+                saveCurrentStagingState();
+
+                if (part === 'part1') {
+                    part1Array = [...part1Array, ...parsedData];
+                } else if (part === 'part2') {
+                    part2Array = [...part2Array, ...parsedData];
+                } else if (part === 'part3') {
+                    part3Array = [...part3Array, ...parsedData];
+                }
+
+                alert("📥 Đã nạp thành công dữ liệu vào bảng tạm!");
+                document.getElementById('tempJson').value = ""; 
+                renderStagingArea();
+
+            } catch (error) {
+                console.error(error);
+                alert("❌ Lỗi định dạng JSON: " + error.message);
+            }
+        }
+
+        // Tải dữ liệu đề thi cũ về để sửa
+        async function loadExamToEdit() {
+            const examId = document.getElementById('editExamSelect').value;
+            if (!examId) {
+                alert("Vui lòng chọn một đề thi trong danh sách!");
+                return;
+            }
+
+            if (confirm("Lưu ý: Hành động này sẽ đè lên dữ liệu bạn đang soạn thảo hiện tại. Bạn có chắc chắn muốn tải dữ liệu đề thi cũ để sửa?")) {
+                try {
+                    const doc = await db.collection("exams").doc(examId).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        editingExamId = doc.id;
+
+                        // Điền thông tin chung
+                        document.getElementById('title').value = data.title;
+                        document.getElementById('subject').value = data.subject;
+                        document.getElementById('duration').value = data.duration;
+
+                        // Đổ câu hỏi vào bảng tạm
+                        part1Array = data.part1 || [];
+                        part2Array = data.part2 || [];
+                        part3Array = data.part3 || [];
+
+                        renderStagingArea();
+
+                        document.getElementById('resetFormBtn').classList.remove('hidden');
+                        document.getElementById('submitBtn').innerText = "💾 Cập Nhật Đề Thi Lên Firebase";
+                        alert("📖 Đã tải dữ liệu đề cũ thành công! Bạn có thể chỉnh sửa mọi câu ở cột bên phải.");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Lỗi tải đề cũ: " + e.message);
+                }
+            }
+        }
+
+        // Thoát chế độ sửa đề cũ, quay về tạo đề mới tinh
+        function resetToNewExam() {
+            editingExamId = null;
+            document.getElementById('title').value = "";
+            document.getElementById('subject').value = "Toán";
+            document.getElementById('duration').value = "90";
+            document.getElementById('editExamSelect').value = "";
+            part1Array = [];
+            part2Array = [];
+            part3Array = [];
+            renderStagingArea();
+            document.getElementById('resetFormBtn').classList.add('hidden');
+            document.getElementById('submitBtn').innerText = "🚀 Đăng Đề Thi Lên Firebase";
+        }
+
+        // Vẽ giao diện chỉnh sửa trực quan
+        function renderStagingArea() {
+            document.getElementById('count1').innerText = part1Array.length;
+            document.getElementById('count2').innerText = part2Array.length;
+            document.getElementById('count3').innerText = part3Array.length;
+            document.getElementById('totalQuestions').innerText = part1Array.length + part2Array.length + part3Array.length;
+
+            const container1 = document.getElementById('stagingPart1');
+            const container2 = document.getElementById('stagingPart2');
+            const container3 = document.getElementById('stagingPart3');
+
+            container1.innerHTML = "";
+            container2.innerHTML = "";
+            container3.innerHTML = "";
+
+            // --- VẼ PHẦN I ---
+            part1Array.forEach((q, idx) => {
+                const imgUrl = q.image_url || "";
+                const html = `
+                    <div class="part1-card border border-blue-200 bg-blue-50/10 rounded-xl p-4 space-y-3 shadow-sm relative">
+                        <button onclick="removeQuestion('part1', ${idx})" class="absolute top-3 right-3 text-red-500 hover:text-red-700 font-bold text-xs">❌ Xóa câu này</button>
+                        <h4 class="font-extrabold text-blue-900 text-xs">CÂU HỎI SỐ ${idx + 1}</h4>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500">Đề bài:</label>
+                            <textarea class="p1-question w-full border p-2 rounded text-xs h-16">${q.question}</textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500">Link ảnh (Dán link Google Drive vào đây):</label>
+                            <input type="text" class="p1-image w-full border p-1.5 rounded text-xs" value="${imgUrl}" oninput="previewImage(this)">
+                            <div class="image-preview mt-1">${imgUrl ? `<img src="${convertDriveUrl(imgUrl)}" class="max-h-24 object-contain rounded border mt-1 shadow-sm">` : ''}</div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div>A: <input type="text" class="p1-opt-a w-full border p-1.5 rounded" value="${q.options[0] || ''}"></div>
+                            <div>B: <input type="text" class="p1-opt-b w-full border p-1.5 rounded" value="${q.options[1] || ''}"></div>
+                            <div>C: <input type="text" class="p1-opt-c w-full border p-1.5 rounded" value="${q.options[2] || ''}"></div>
+                            <div>D: <input type="text" class="p1-opt-d w-full border p-1.5 rounded" value="${q.options[3] || ''}"></div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-xs items-center">
+                            <div>
+                                Đáp án đúng:
+                                <select class="p1-ans border p-1.5 rounded w-full font-bold text-blue-700 bg-white">
+                                    <option value="A" ${q.correct_answer==='A'?'selected':''}>A</option>
+                                    <option value="B" ${q.correct_answer==='B'?'selected':''}>B</option>
+                                    <option value="C" ${q.correct_answer==='C'?'selected':''}>C</option>
+                                    <option value="D" ${q.correct_answer==='D'?'selected':''}>D</option>
+                                </select>
+                            </div>
+                            <div class="col-span-2">
+                                Giải thích chi tiết:
+                                <textarea class="p1-exp w-full border p-1.5 rounded h-8">${q.explanation || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container1.insertAdjacentHTML('beforeend', html);
+            });
+
+            // --- VẼ PHẦN II (Đúng / Sai) ---
+            part2Array.forEach((q, idx) => {
+                const imgUrl = q.image_url || "";
+                let correctAnsList = q.correct_answer ? q.correct_answer.split(',') : ["Đ","S","S","Đ"];
+
+                let stList = q.statements || [
+                    { id: "a", text: q.options && q.options[0] ? q.options[0] : "" },
+                    { id: "b", text: q.options && q.options[1] ? q.options[1] : "" },
+                    { id: "c", text: q.options && q.options[2] ? q.options[2] : "" },
+                    { id: "d", text: q.options && q.options[3] ? q.options[3] : "" }
+                ];
+
+                const html = `
+                    <div class="part2-card border border-green-200 bg-green-50/10 rounded-xl p-4 space-y-3 shadow-sm relative">
+                        <button onclick="removeQuestion('part2', ${idx})" class="absolute top-3 right-3 text-red-500 hover:text-red-700 font-bold text-xs">❌ Xóa câu này</button>
+                        <h4 class="font-extrabold text-green-900 text-xs">CÂU HỎI SỐ ${idx + 1}</h4>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500">Đề bài / Câu dẫn chung:</label>
+                            <textarea class="p2-question w-full border p-2 rounded text-xs h-16">${q.question}</textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500">Link ảnh (Dán link Google Drive vào đây):</label>
+                            <input type="text" class="p2-image w-full border p-1.5 rounded text-xs" value="${imgUrl}" oninput="previewImage(this)">
+                            <div class="image-preview mt-1">${imgUrl ? `<img src="${convertDriveUrl(imgUrl)}" class="max-h-24 object-contain rounded border mt-1 shadow-sm">` : ''}</div>
+                        </div>
+
+                        <div class="space-y-2 text-xs">
+                            <label class="block text-[10px] font-bold text-gray-500">4 Mệnh đề phát biểu và đáp án Đúng(Đ) / Sai(S):</label>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold w-4">a.</span>
+                                <input type="text" class="p2-st-a flex-grow border p-1 rounded" value="${stList[0].text}">
+                                <select class="p2-ans-a border p-1 rounded"><option value="Đ" ${correctAnsList[0]==='Đ'?'selected':''}>Đúng</option><option value="S" ${correctAnsList[0]==='S'?'selected':''}>Sai</option></select>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold w-4">b.</span>
+                                <input type="text" class="p2-st-b flex-grow border p-1 rounded" value="${stList[1].text}">
+                                <select class="p2-ans-b border p-1 rounded"><option value="Đ" ${correctAnsList[1]==='Đ'?'selected':''}>Đúng</option><option value="S" ${correctAnsList[1]==='S'?'selected':''}>Sai</option></select>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold w-4">c.</span>
+                                <input type="text" class="p2-st-c flex-grow border p-1 rounded" value="${stList[2].text}">
+                                <select class="p2-ans-c border p-1 rounded"><option value="Đ" ${correctAnsList[2]==='Đ'?'selected':''}>Đúng</option><option value="S" ${correctAnsList[2]==='S'?'selected':''}>Sai</option></select>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold w-4">d.</span>
+                                <input type="text" class="p2-st-d flex-grow border p-1 rounded" value="${stList[3].text}">
+                                <select class="p2-ans-d border p-1 rounded"><option value="Đ" ${correctAnsList[3]==='Đ'?'selected':''}>Đúng</option><option value="S" ${correctAnsList[3]==='S'?'selected':''}>Sai</option></select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500">Giải thích chi tiết:</label>
+                            <textarea class="p2-exp w-full border p-2 rounded text-xs h-12">${q.explanation || ''}</textarea>
+                        </div>
+                    </div>
+                `;
+                container2.insertAdjacentHTML('beforeend', html);
+            });
+
+            // --- VẼ PHẦN III ---
+            part3Array.forEach((q, idx) => {
+                const imgUrl = q.image_url || "";
+                const correctAns = q.answer || q.correct_answer || "";
+
+                const html = `
+                    <div class="part3-card border border-purple-200 bg-purple-50/10 rounded-xl p-4 space-y-3 shadow-sm relative">
+                        <button onclick="removeQuestion('part3', ${idx})" class="absolute top-3 right-3 text-red-500 hover:text-red-700 font-bold text-xs">❌ Xóa câu này</button>
+                        <h4 class="font-extrabold text-purple-900 text-xs">CÂU HỎI SỐ ${idx + 1}</h4>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500">Đề bài:</label>
+                            <textarea class="p3-question w-full border p-2 rounded text-xs h-16">${q.question}</textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500">Link ảnh (Dán link Google Drive vào đây):</label>
+                            <input type="text" class="p3-image w-full border p-1.5 rounded text-xs" value="${imgUrl}" oninput="previewImage(this)">
+                            <div class="image-preview mt-1">${imgUrl ? `<img src="${convertDriveUrl(imgUrl)}" class="max-h-24 object-contain rounded border mt-1 shadow-sm">` : ''}</div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-xs items-center">
+                            <div>
+                                Đáp số đúng:
+                                <input type="text" class="p3-ans w-full border p-1.5 rounded font-bold text-purple-700" value="${correctAns}">
+                            </div>
+                            <div class="col-span-2">
+                                Giải thích chi tiết:
+                                <textarea class="p3-exp w-full border p-1.5 rounded h-8">${q.explanation || ''}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container3.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // Hàm xóa câu hỏi khỏi bảng tạm (đã giữ lại dữ liệu gõ dở)
+        function removeQuestion(part, idx) {
+            saveCurrentStagingState();
+            if (part === 'part1') part1Array.splice(idx, 1);
+            if (part === 'part2') part2Array.splice(idx, 1);
+            if (part === 'part3') part3Array.splice(idx, 1);
+            renderStagingArea();
+        }
+
+        // Gửi và Đăng đề thi (Tự động nhận diện: Cập nhật đề cũ HOẶC Đăng đề mới)
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            const title = document.getElementById('title').value.trim();
+            const subject = document.getElementById('subject').value;
+            const duration = parseInt(document.getElementById('duration').value);
+            const statusMsg = document.getElementById('statusMsg');
+
+            if (!title || isNaN(duration)) {
+                alert("Vui lòng điền tiêu đề và thời gian làm bài thi!");
+                return;
+            }
+
+            const p1Cards = document.querySelectorAll('.part1-card');
+            const p2Cards = document.querySelectorAll('.part2-card');
+            const p3Cards = document.querySelectorAll('.part3-card');
+
+            if (p1Cards.length === 0 && p2Cards.length === 0 && p3Cards.length === 0) {
+                alert("Bảng tạm đang trống!");
+                return;
+            }
+
+            statusMsg.classList.remove('hidden');
+            statusMsg.innerText = "Đang đồng bộ và tải đề thi lên mạng...";
+            statusMsg.className = "text-center mt-3 text-blue-600 font-bold animate-pulse";
+
+            try {
+                // Thu thập Phần 1
+                const finalPart1 = [];
+                p1Cards.forEach((card) => {
+                    finalPart1.push({
+                        question: card.querySelector('.p1-question').value.trim(),
+                        image_url: card.querySelector('.p1-image').value.trim(),
+                        options: [
+                            card.querySelector('.p1-opt-a').value.trim(),
+                            card.querySelector('.p1-opt-b').value.trim(),
+                            card.querySelector('.p1-opt-c').value.trim(),
+                            card.querySelector('.p1-opt-d').value.trim()
+                        ],
+                        correct_answer: card.querySelector('.p1-ans').value,
+                        explanation: card.querySelector('.p1-exp').value.trim()
+                    });
+                });
+
+                // Thu thập Phần 2 (Đúng/Sai)
+                const finalPart2 = [];
+                p2Cards.forEach((card) => {
+                    const ansA = card.querySelector('.p2-ans-a').value;
+                    const ansB = card.querySelector('.p2-ans-b').value;
+                    const ansC = card.querySelector('.p2-ans-c').value;
+                    const ansD = card.querySelector('.p2-ans-d').value;
+
+                    finalPart2.push({
+                        question: card.querySelector('.p2-question').value.trim(),
+                        image_url: card.querySelector('.p2-image').value.trim(),
+                        options: ["a", "b", "c", "d"],
+                        correct_answer: `${ansA},${ansB},${ansC},${ansD}`,
+                        statements: [
+                            { id: "a", text: card.querySelector('.p2-st-a').value.trim() },
+                            { id: "b", text: card.querySelector('.p2-st-b').value.trim() },
+                            { id: "c", text: card.querySelector('.p2-st-c').value.trim() },
+                            { id: "d", text: card.querySelector('.p2-st-d').value.trim() }
+                        ],
+                        explanation: card.querySelector('.p2-exp').value.trim()
+                    });
+                });
+
+                // Thu thập Phần 3 (Trả lời ngắn)
+                const finalPart3 = [];
+                p3Cards.forEach((card) => {
+                    finalPart3.push({
+                        question: card.querySelector('.p3-question').value.trim(),
+                        image_url: card.querySelector('.p3-image').value.trim(),
+                        answer: card.querySelector('.p3-ans').value.trim(),
+                        explanation: card.querySelector('.p3-exp').value.trim()
+                    });
+                });
+
+                // KIỂM TRA CHẾ ĐỘ: CẬP NHẬT ĐỀ CŨ hay ĐĂNG ĐỀ MỚI TINH
+                if (editingExamId) {
+                    // Chế độ: Sửa đề cũ
+                    await db.collection("exams").doc(editingExamId).update({
+                        title: title,
+                        subject: subject,
+                        duration: duration,
+                        part1: finalPart1,
+                        part2: finalPart2,
+                        part3: finalPart3
+                    });
+                    statusMsg.innerText = "💾 Đã cập nhật đề thi cũ thành công!";
+                    statusMsg.className = "text-center mt-3 text-yellow-600 font-bold text-lg";
+                    resetToNewExam(); // Quay về chế độ tạo đề mới
+                } else {
+                    // Chế độ: Đăng đề mới tinh
+                    await db.collection("exams").add({
+                        title: title,
+                        subject: subject,
+                        duration: duration,
+                        part1: finalPart1,
+                        part2: finalPart2,
+                        part3: finalPart3,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    statusMsg.innerText = "🚀 Đăng đề thi mới lên Firebase thành công!";
+                    statusMsg.className = "text-center mt-3 text-green-600 font-bold text-lg";
+                    resetToNewExam();
+                }
+
+                // Cập nhật lại danh sách đề trên dropdown sửa đề
+                loadExistingExamsList();
+
+            } catch (error) {
+                console.error(error);
+                statusMsg.innerText = "❌ Lỗi: " + error.message;
+                statusMsg.className = "text-center mt-3 text-red-600 font-bold";
+            }
+        });
+    </script>
+</body>
+</html>

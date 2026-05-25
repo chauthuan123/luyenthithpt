@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Luyện Thi THPT Quốc Gia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-blue-50 min-h-screen flex items-center justify-center px-4">
+    <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+        <h2 class="text-3xl font-bold text-blue-600 text-center mb-2">Luyện Thi THPT</h2>
+        <p class="text-gray-500 text-center mb-8" id="formSubtitle">Đăng nhập để bắt đầu làm bài thi thử</p>
+
+        <!-- Form Đăng nhập / Đăng ký -->
+        <div class="space-y-4">
+            <div>
+                <label class="block text-gray-700 font-semibold mb-1">Email của bạn:</label>
+                <input type="email" id="email" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="name@gmail.com">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-1">Mật khẩu:</label>
+                <input type="password" id="password" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="••••••••">
+            </div>
+
+            <!-- Nút bấm hành động -->
+            <button id="mainBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+                Đăng Nhập
+            </button>
+
+            <!-- Chuyển đổi qua lại giữa Đăng nhập & Đăng ký -->
+            <div class="text-center mt-6">
+                <button id="toggleAuthModeBtn" class="text-blue-500 hover:underline font-medium">
+                    Chưa có tài khoản? Đăng ký ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <script>
+        // ==========================================
+        // DÁN FIREBASE CONFIG THỰC TẾ CỦA BẠN VÀO ĐÂY
+        // ==========================================
+        const firebaseConfig = {
+  apiKey: "AIzaSyAyLs8e_JzKxbCemNrBSSGit4RlzGK8i2c",
+  authDomain: "luyenthithpt-25ee7.firebaseapp.com",
+  projectId: "luyenthithpt-25ee7",
+  storageBucket: "luyenthithpt-25ee7.firebasestorage.app",
+  messagingSenderId: "69902728630",
+  appId: "1:69902728630:web:d828ddd5cca8f35649d517",
+  measurementId: "G-YE1V7SZZ11"
+};
+
+        // Khởi tạo Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        const ADMIN_EMAIL = "chauhoathuan@gmail.com"; // Email Admin duy nhất của bạn
+        let isLoginMode = true; 
+
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const mainBtn = document.getElementById('mainBtn');
+        const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
+        const formSubtitle = document.getElementById('formSubtitle');
+
+        // Hàm xử lý điều hướng thông minh dựa trên vai trò (Email)
+        function redirectByUserRole(user) {
+            if (user.email === ADMIN_EMAIL) {
+                // Nếu là Admin -> Chuyển thẳng sang trang quản trị
+                window.location.href = "quantri.html";
+            } else {
+                // Nếu là học sinh -> Chuyển sang trang chọn đề
+                window.location.href = "dashboard.html";
+            }
+        }
+
+        // Xử lý chuyển đổi chế độ Đăng nhập / Đăng ký
+        toggleAuthModeBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+                mainBtn.innerText = "Đăng Nhập";
+                formSubtitle.innerText = "Đăng nhập để bắt đầu làm bài thi thử";
+                toggleAuthModeBtn.innerText = "Chưa có tài khoản? Đăng ký ngay";
+            } else {
+                mainBtn.innerText = "Đăng Ký Tài Khoản";
+                formSubtitle.innerText = "Tạo tài khoản luyện thi hoàn toàn miễn phí";
+                toggleAuthModeBtn.innerText = "Đã có tài khoản? Đăng nhập";
+            }
+        });
+
+        // Xử lý sự kiện bấm nút chính
+        mainBtn.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                alert("Vui lòng điền đầy đủ Email và Mật khẩu!");
+                return;
+            }
+
+            try {
+                if (isLoginMode) {
+                    // Đăng nhập thành công -> Trình lắng nghe onAuthStateChanged phía dưới sẽ tự động điều hướng
+                    await auth.signInWithEmailAndPassword(email, password);
+                } else {
+                    // Đăng ký thành công -> Trình lắng nghe onAuthStateChanged phía dưới sẽ tự động điều hướng
+                    await auth.createUserWithEmailAndPassword(email, password);
+                    alert("Đăng ký tài khoản thành công!");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Lỗi: " + error.message);
+            }
+        });
+
+        // LẮNG NGHE TRẠNG THÁI ĐĂNG NHẬP (Tự động điều hướng thông minh)
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                redirectByUserRole(user);
+            }
+        });
+    </script>
+</body>
+</html>
