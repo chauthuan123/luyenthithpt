@@ -33,12 +33,16 @@
             <h1 id="examTitle" class="text-lg font-bold text-gray-800">Đang tải đề thi...</h1>
             <p id="examSubject" class="text-xs text-blue-600 font-bold uppercase"></p>
         </div>
-        <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-4">
             <div id="timerContainer" class="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-lg font-mono font-bold text-lg flex items-center space-x-2">
                 <span>⏱️</span> <span id="timer">--:--</span>
             </div>
             <button id="submitBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2 rounded-lg transition">
                 Nộp Bài
+            </button>
+            <!-- Nút thi lại (Chỉ hiện khi xem kết quả) -->
+            <button id="retakeBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2 rounded-lg transition hidden">
+                Thi Lại
             </button>
             <button id="backBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg transition hidden">
                 Quay Lại
@@ -176,6 +180,7 @@
                     document.getElementById('timerContainer').classList.add('hidden');
                     document.getElementById('submitBtn').classList.add('hidden');
                     document.getElementById('backBtn').classList.remove('hidden');
+                    document.getElementById('retakeBtn').classList.remove('hidden'); // Hiện nút Thi Lại
 
                     const resultDoc = await db.collection("results").doc(resultId).get();
                     if (resultDoc.exists) {
@@ -348,114 +353,114 @@
 
         // THUẬT TOÁN CHẤM ĐIỂM PHÂN TẦNG CHUẨN BỘ GIÁO DỤC [1]
         async function submitExam() {
-    try {
-        if (countdownTimer) clearInterval(countdownTimer);
+            try {
+                if (countdownTimer) clearInterval(countdownTimer);
 
-        let part1Score = 0; // Điểm Phần I (Tối đa 4.5)
-        let part2Score = 0; // Điểm Phần II (Tối đa 4.0)
-        let part3Score = 0; // Điểm Phần III (Tối đa 1.5)
+                let part1Score = 0; // Điểm Phần I (Tối đa 4.5)
+                let part2Score = 0; // Điểm Phần II (Tối đa 4.0)
+                let part3Score = 0; // Điểm Phần III (Tối đa 1.5)
 
-        let p1CorrectCount = 0;
-        let p2CorrectStatementsCount = 0; // Tổng số ý đúng trong cả 4 câu Phần II
-        let p3CorrectCount = 0;
-        
-        const userAnswers = {
-            part1: [],
-            part2: [],
-            part3: []
-        };
-
-        // 1. Chấm điểm phần I (Mỗi câu đúng được 0.25đ)
-        for (let i = 0; i < 18; i++) {
-            const selected = document.querySelector(`input[name="part1_${i}"]:checked`);
-            const ans = selected ? selected.value : "";
-            userAnswers.part1.push(ans);
-            
-            const q = examData.part1 && examData.part1[i] ? examData.part1[i] : {};
-            const correct = q.correct_answer || "";
-            if (ans === correct && correct !== "") {
-                p1CorrectCount++;
-                part1Score += 0.25;
-            }
-        }
-
-        // 2. Chấm điểm phần II (Theo quy tắc đặc biệt của Bộ GD)
-        for (let i = 0; i < 4; i++) {
-            let stAns = {};
-            const q = examData.part2 && examData.part2[i] ? examData.part2[i] : {};
-            let correctAnsList = q.correct_answer ? q.correct_answer.split(',') : [];
-            let correctInThisQuestion = 0; // Số ý đúng riêng của câu này (0 đến 4)
-
-            ["a", "b", "c", "d"].forEach((stId, sIdx) => {
-                const selected = document.querySelector(`input[name="part2_${i}_${stId}"]:checked`);
-                const ans = selected ? selected.value : "";
-                stAns[stId] = ans;
+                let p1CorrectCount = 0;
+                let p2CorrectStatementsCount = 0; // Tổng số ý đúng trong cả 4 câu Phần II
+                let p3CorrectCount = 0;
                 
-                let correctAns = correctAnsList[sIdx] ? correctAnsList[sIdx].trim() : "";
-                if (ans === correctAns && correctAns !== "") {
-                    correctInThisQuestion++;
-                    p2CorrectStatementsCount++;
+                const userAnswers = {
+                    part1: [],
+                    part2: [],
+                    part3: []
+                };
+
+                // 1. Chấm điểm phần I (Mỗi câu đúng được 0.25đ)
+                for (let i = 0; i < 18; i++) {
+                    const selected = document.querySelector(`input[name="part1_${i}"]:checked`);
+                    const ans = selected ? selected.value : "";
+                    userAnswers.part1.push(ans);
+                    
+                    const q = examData.part1 && examData.part1[i] ? examData.part1[i] : {};
+                    const correct = q.correct_answer || "";
+                    if (ans === correct && correct !== "") {
+                        p1CorrectCount++;
+                        part1Score += 0.25;
+                    }
                 }
-            });
 
-            // Tính điểm riêng cho câu này dựa vào số ý đúng (0.1, 0.25, 0.5, 1.0)
-            if (correctInThisQuestion === 1) part2Score += 0.1;
-            else if (correctInThisQuestion === 2) part2Score += 0.25;
-            else if (correctInThisQuestion === 3) part2Score += 0.5;
-            else if (correctInThisQuestion === 4) part2Score += 1.0;
+                // 2. Chấm điểm phần II (Theo quy tắc đặc biệt của Bộ GD)
+                for (let i = 0; i < 4; i++) {
+                    let stAns = {};
+                    const q = examData.part2 && examData.part2[i] ? examData.part2[i] : {};
+                    let correctAnsList = q.correct_answer ? q.correct_answer.split(',') : [];
+                    let correctInThisQuestion = 0; // Số ý đúng riêng của câu này (0 đến 4)
 
-            userAnswers.part2.push(stAns);
-        }
+                    ["a", "b", "c", "d"].forEach((stId, sIdx) => {
+                        const selected = document.querySelector(`input[name="part2_${i}_${stId}"]:checked`);
+                        const ans = selected ? selected.value : "";
+                        stAns[stId] = ans;
+                        
+                        let correctAns = correctAnsList[sIdx] ? correctAnsList[sIdx].trim() : "";
+                        if (ans === correctAns && correctAns !== "") {
+                            correctInThisQuestion++;
+                            p2CorrectStatementsCount++;
+                        }
+                    });
 
-        // 3. Chấm điểm phần III (Mỗi câu đúng được 0.25đ)
-        for (let i = 0; i < 6; i++) {
-            const inputEl = document.getElementById(`p3_${i}`);
-            const ans = inputEl ? inputEl.value.trim() : "";
-            userAnswers.part3.push(ans);
-            
-            const q = examData.part3 && examData.part3[i] ? examData.part3[i] : {};
-            let correctAnswerStr = q.correct_answer || q.answer || "";
-            if (ans.toLowerCase() === correctAnswerStr.trim().toLowerCase() && correctAnswerStr !== "") {
-                p3CorrectCount++;
-                part3Score += 0.25;
+                    // Tính điểm riêng cho câu này dựa vào số ý đúng (0.1, 0.25, 0.5, 1.0)
+                    if (correctInThisQuestion === 1) part2Score += 0.1;
+                    else if (correctInThisQuestion === 2) part2Score += 0.25;
+                    else if (correctInThisQuestion === 3) part2Score += 0.5;
+                    else if (correctInThisQuestion === 4) part2Score += 1.0;
+
+                    userAnswers.part2.push(stAns);
+                }
+
+                // 3. Chấm điểm phần III (Mỗi câu đúng được 0.25đ)
+                for (let i = 0; i < 6; i++) {
+                    const inputEl = document.getElementById(`p3_${i}`);
+                    const ans = inputEl ? inputEl.value.trim() : "";
+                    userAnswers.part3.push(ans);
+                    
+                    const q = examData.part3 && examData.part3[i] ? examData.part3[i] : {};
+                    let correctAnswerStr = q.correct_answer || q.answer || "";
+                    if (ans.toLowerCase() === correctAnswerStr.trim().toLowerCase() && correctAnswerStr !== "") {
+                        p3CorrectCount++;
+                        part3Score += 0.25;
+                    }
+                }
+
+                // Tính tổng điểm (Làm tròn đến 2 chữ số thập phân)
+                const totalScore = parseFloat((part1Score + part2Score + part3Score).toFixed(2));
+
+                const finalUserId = userId || "anonymous_user";
+                const finalUserEmail = userEmail || "anonymous@domain.com";
+
+                // Ghi kết quả thi và danh sách đáp án học sinh đã chọn lên Firestore
+                const docRef = await db.collection("results").add({
+                    userId: finalUserId,
+                    userEmail: finalUserEmail,
+                    examId: examId,
+                    examTitle: examData.title || "Đề thi không tiêu đề",
+                    subject: examData.subject || "Khác",
+                    
+                    score: totalScore, // Tổng điểm
+                    part1Score: parseFloat(part1Score.toFixed(2)),
+                    part2Score: parseFloat(part2Score.toFixed(2)),
+                    part3Score: parseFloat(part3Score.toFixed(2)),
+
+                    p1CorrectCount: p1CorrectCount,
+                    p2CorrectStatementsCount: p2CorrectStatementsCount,
+                    p3CorrectCount: p3CorrectCount,
+
+                    userAnswers: userAnswers,
+                    createdAt: new Date() // Thay thế serverTimestamp bằng JS Date tiêu chuẩn
+                });
+
+                alert("Nộp bài và tính điểm theo quy chế Bộ GD thành công!");
+                window.location.href = `?examId=${examId}&resultId=${docRef.id}`;
+
+            } catch (error) {
+                console.error("Lỗi chi tiết khi nộp bài:", error);
+                alert("Đã xảy ra lỗi khi nộp bài: " + error.message);
             }
         }
-
-        // Tính tổng điểm (Làm tròn đến 2 chữ số thập phân)
-        const totalScore = parseFloat((part1Score + part2Score + part3Score).toFixed(2));
-
-        const finalUserId = userId || "anonymous_user";
-        const finalUserEmail = userEmail || "anonymous@domain.com";
-
-        // Ghi kết quả thi và danh sách đáp án học sinh đã chọn lên Firestore
-        const docRef = await db.collection("results").add({
-            userId: finalUserId,
-            userEmail: finalUserEmail,
-            examId: examId,
-            examTitle: examData.title || "Đề thi không tiêu đề",
-            subject: examData.subject || "Khác",
-            
-            score: totalScore, // Tổng điểm
-            part1Score: parseFloat(part1Score.toFixed(2)),
-            part2Score: parseFloat(part2Score.toFixed(2)),
-            part3Score: parseFloat(part3Score.toFixed(2)),
-
-            p1CorrectCount: p1CorrectCount,
-            p2CorrectStatementsCount: p2CorrectStatementsCount,
-            p3CorrectCount: p3CorrectCount,
-
-            userAnswers: userAnswers,
-            createdAt: new Date() // Thay thế serverTimestamp bằng JS Date tiêu chuẩn
-        });
-
-        alert("Nộp bài và tính điểm theo quy chế Bộ GD thành công!");
-        window.location.href = `?examId=${examId}&resultId=${docRef.id}`;
-
-    } catch (error) {
-        console.error("Lỗi chi tiết khi nộp bài:", error);
-        alert("Đã xảy ra lỗi khi nộp bài: " + error.message);
-    }
-}
 
         // Hàm hiển thị bảng điểm chi tiết [1]
         function showResultBannerDetail(res) {
@@ -472,6 +477,13 @@
         document.getElementById('submitBtn').addEventListener('click', () => {
             if (confirm("Bạn có chắc chắn muốn nộp bài thi ngay?")) {
                 submitExam();
+            }
+        });
+
+        // Xử lý sự kiện bấm nút Thi Lại
+        document.getElementById('retakeBtn').addEventListener('click', () => {
+            if (confirm("Bạn có chắc chắn muốn làm lại đề thi này không? Mọi câu trả lời cũ sẽ được thiết lập lại.")) {
+                window.location.href = `?examId=${examId}`;
             }
         });
 
