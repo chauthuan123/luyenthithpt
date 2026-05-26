@@ -226,8 +226,12 @@
             sheet2.innerHTML = "";
             sheet3.innerHTML = "";
 
-            // PHẦN I (18 câu - Trắc nghiệm chọn 1 đáp án)
-            for (let i = 0; i < 18; i++) {
+            // Kiểm tra nếu là môn Toán thì chỉ hiển thị 12 câu, ngược lại 18 câu
+            const isMath = examData && examData.subject === 'Toán';
+            const part1Count = isMath ? 12 : 18;
+
+            // PHẦN I (Trắc nghiệm chọn 1 đáp án)
+            for (let i = 0; i < part1Count; i++) {
                 let savedAns = isReviewMode && resultData.userAnswers?.part1 ? resultData.userAnswers.part1[i] : "";
                 let correctAnsObj = examData.part1 && examData.part1[i] ? examData.part1[i] : {};
                 let correctAns = correctAnsObj.correct_answer || "";
@@ -356,9 +360,13 @@
             try {
                 if (countdownTimer) clearInterval(countdownTimer);
 
-                let part1Score = 0; // Điểm Phần I (Tối đa 4.5)
-                let part2Score = 0; // Điểm Phần II (Tối đa 4.0)
-                let part3Score = 0; // Điểm Phần III (Tối đa 1.5)
+                const isMath = examData && examData.subject === 'Toán';
+                const part1Count = isMath ? 12 : 18;
+                const part3PointsPerQuestion = isMath ? 0.5 : 0.25; // Toán: 0.5đ/câu; Môn khác: 0.25đ/câu
+
+                let part1Score = 0; // Điểm Phần I
+                let part2Score = 0; // Điểm Phần II
+                let part3Score = 0; // Điểm Phần III
 
                 let p1CorrectCount = 0;
                 let p2CorrectStatementsCount = 0; // Tổng số ý đúng trong cả 4 câu Phần II
@@ -371,7 +379,7 @@
                 };
 
                 // 1. Chấm điểm phần I (Mỗi câu đúng được 0.25đ)
-                for (let i = 0; i < 18; i++) {
+                for (let i = 0; i < part1Count; i++) {
                     const selected = document.querySelector(`input[name="part1_${i}"]:checked`);
                     const ans = selected ? selected.value : "";
                     userAnswers.part1.push(ans);
@@ -412,7 +420,7 @@
                     userAnswers.part2.push(stAns);
                 }
 
-                // 3. Chấm điểm phần III (Mỗi câu đúng được 0.25đ)
+                // 3. Chấm điểm phần III (Môn toán mỗi câu đúng 0.5đ, các môn khác 0.25đ)
                 for (let i = 0; i < 6; i++) {
                     const inputEl = document.getElementById(`p3_${i}`);
                     const ans = inputEl ? inputEl.value.trim() : "";
@@ -422,7 +430,7 @@
                     let correctAnswerStr = q.correct_answer || q.answer || "";
                     if (ans.toLowerCase() === correctAnswerStr.trim().toLowerCase() && correctAnswerStr !== "") {
                         p3CorrectCount++;
-                        part3Score += 0.25;
+                        part3Score += part3PointsPerQuestion;
                     }
                 }
 
@@ -469,7 +477,10 @@
             const scoreDisplay = res.score !== undefined ? res.score : (res.scores?.total || 0);
             document.getElementById('scoreValue').innerText = `${scoreDisplay} / 10`;
             
-            document.getElementById('part1ScoreText').innerText = `🔹 Phần I (Trắc nghiệm đơn): Đúng ${res.p1CorrectCount || 0}/18 câu ➔ Đạt ${res.part1Score || 0} điểm`;
+            const isMath = (res.subject || examData?.subject) === 'Toán';
+            const part1Total = isMath ? 12 : 18;
+
+            document.getElementById('part1ScoreText').innerText = `🔹 Phần I (Trắc nghiệm đơn): Đúng ${res.p1CorrectCount || 0}/${part1Total} câu ➔ Đạt ${res.part1Score || 0} điểm`;
             document.getElementById('part2ScoreText').innerText = `🔹 Phần II (Đúng/Sai): Đúng ${res.p2CorrectStatementsCount || 0}/16 ý phát biểu ➔ Đạt ${res.part2Score || 0} điểm`;
             document.getElementById('part3ScoreText').innerText = `🔹 Phần III (Trả lời ngắn): Đúng ${res.p3CorrectCount || 0}/6 câu ➔ Đạt ${res.part3Score || 0} điểm`;
         }

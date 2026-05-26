@@ -83,7 +83,7 @@
                 <div class="space-y-8 overflow-y-auto max-h-[700px] pr-2">
                     <!-- PHẦN I -->
                     <div class="space-y-3">
-                        <h3 class="font-extrabold text-blue-700 text-sm uppercase border-b pb-1">PHẦN I. 18 câu trắc nghiệm đơn</h3>
+                        <h3 class="font-extrabold text-blue-700 text-sm uppercase border-b pb-1">PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn</h3>
                         <div id="stagingPart1" class="space-y-3"></div>
                     </div>
 
@@ -117,35 +117,39 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <script>
-        // ==========================================
-        // DÁN FIREBASE CONFIG THỰC TẾ CỦA BẠN VÀO ĐÂY
-        // ==========================================
         const firebaseConfig = {
-  apiKey: "AIzaSyAyLs8e_JzKxbCemNrBSSGit4RlzGK8i2c",
-  authDomain: "luyenthithpt-25ee7.firebaseapp.com",
-  projectId: "luyenthithpt-25ee7",
-  storageBucket: "luyenthithpt-25ee7.firebasestorage.app",
-  messagingSenderId: "69902728630",
-  appId: "1:69902728630:web:d828ddd5cca8f35649d517",
-  measurementId: "G-YE1V7SZZ11"
-};
+          apiKey: "AIzaSyAyLs8e_JzKxbCemNrBSSGit4RlzGK8i2c",
+          authDomain: "luyenthithpt-25ee7.firebaseapp.com",
+          projectId: "luyenthithpt-25ee7",
+          storageBucket: "luyenthithpt-25ee7.firebasestorage.app",
+          messagingSenderId: "69902728630",
+          appId: "1:69902728630:web:d828ddd5cca8f35649d517",
+          measurementId: "G-YE1V7SZZ11"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         let editingExamId = null;
 
-        // Vẽ 18 + 4 + 6 ô nhập trống ngay khi load trang
         window.onload = () => {
             renderStagingFields();
             loadExistingExamsList();
         };
 
+        // Hàm lấy số câu hỏi động dựa theo môn học hiện tại
+        function getPart1Count() {
+            const subject = document.getElementById('subject').value;
+            return subject === 'Toán' ? 12 : 18;
+        }
+
         function renderStagingFields() {
-            // Phần I (18 câu)
+            const part1Count = getPart1Count();
+
+            // Phần I (12 hoặc 18 câu tùy môn học)
             const container1 = document.getElementById('stagingPart1');
             container1.innerHTML = "";
-            for (let i = 0; i < 18; i++) {
+            for (let i = 0; i < part1Count; i++) {
                 container1.insertAdjacentHTML('beforeend', `
                     <div class="part1-card border border-blue-100 bg-blue-50/10 p-3 rounded-lg flex items-center space-x-4 text-xs">
                         <span class="font-bold text-blue-900 w-16">Câu ${i+1}:</span>
@@ -163,7 +167,7 @@
                 `);
             }
 
-            // Phần II (4 câu Đúng/Sai)
+            // Phần II (4 câu Đúng/Sai - Giữ nguyên)
             const container2 = document.getElementById('stagingPart2');
             container2.innerHTML = "";
             for (let i = 0; i < 4; i++) {
@@ -184,7 +188,7 @@
                 `);
             }
 
-            // Phần III (6 câu trả lời ngắn)
+            // Phần III (6 câu trả lời ngắn - Giữ nguyên)
             const container3 = document.getElementById('stagingPart3');
             container3.innerHTML = "";
             for (let i = 0; i < 6; i++) {
@@ -204,14 +208,15 @@
             }
         }
 
-        // Tự động chỉnh thời gian theo môn
+        // Tự động chỉnh thời gian và vẽ lại số câu theo môn học được chọn
         const subjectSelect = document.getElementById('subject');
         const durationInput = document.getElementById('duration');
         subjectSelect.addEventListener('change', () => {
             durationInput.value = (subjectSelect.value === 'Toán') ? 90 : 50;
+            renderStagingFields();
         });
 
-        // HÀM CHỦ CHỐT: Đọc đoạn JSON đáp án dán vào và tự điền lên các ô tương ứng trên màn hình
+        // Đọc đoạn JSON đáp án dán vào và tự điền lên các ô tương ứng
         function importJsonToStaging() {
             const part = document.getElementById('jsonPart').value;
             const jsonText = document.getElementById('tempJson').value.trim();
@@ -228,8 +233,9 @@
                 }
 
                 if (part === 'part1') {
+                    const part1Count = getPart1Count();
                     parsedData.forEach((item, idx) => {
-                        if (idx < 18) {
+                        if (idx < part1Count) {
                             const card = document.querySelectorAll('.part1-card')[idx];
                             if (card) {
                                 if (item.correct_answer) card.querySelector('.p1-ans').value = item.correct_answer.toUpperCase();
@@ -267,7 +273,7 @@
                 }
 
                 alert("📥 Đã nạp thành công dữ liệu từ JSON vào Phiếu đáp án!");
-                document.getElementById('tempJson').value = ""; // Clear để dán tiếp phần sau
+                document.getElementById('tempJson').value = "";
 
             } catch (error) {
                 console.error(error);
@@ -308,6 +314,9 @@
                     document.getElementById('subject').value = data.subject;
                     document.getElementById('duration').value = data.duration;
                     document.getElementById('pdfUrl').value = data.pdf_url || "";
+
+                    // Tạo lại form nhập động dựa theo môn học vừa tải về
+                    renderStagingFields();
 
                     // Đổ đáp án Phần I
                     if (data.part1) {
@@ -384,7 +393,7 @@
             statusMsg.className = "text-center mt-3 text-blue-600 font-bold animate-pulse";
 
             try {
-                // Thu thập Phần I (18 câu)
+                // Thu thập Phần I (Số lượng câu hỏi động theo môn học hiện tại)
                 const finalPart1 = [];
                 const p1Cards = document.querySelectorAll('.part1-card');
                 p1Cards.forEach((card) => {
@@ -429,7 +438,7 @@
                         part2: finalPart2,
                         part3: finalPart3
                     });
-                    statusMsg.innerText = "💾 Cập nhật đề thi cũ thành công!";
+                    statusMsg.innerText = "💾 Cập nhật đề thi thành công!";
                     statusMsg.className = "text-center mt-3 text-yellow-600 font-bold text-lg";
                     resetToNewExam();
                 } else {
@@ -443,7 +452,7 @@
                         part3: finalPart3,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    statusMsg.innerText = "🚀 Đăng đề thi PDF mới lên Firebase thành công!";
+                    statusMsg.innerText = "🚀 Đăng đề thi mới lên Firebase thành công!";
                     statusMsg.className = "text-center mt-3 text-green-600 font-bold text-lg";
                     resetToNewExam();
                 }
